@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  # Service 1 : La Base de données
+  postgres:
+    image: postgres:15
+    container_name: etf_db
+    environment:
+      POSTGRES_USER: user_etf
+      POSTGRES_PASSWORD: password_etf
+      POSTGRES_DB: etf_data
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - etf_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user_etf -d etf_data"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Service 2 : Interface PgAdmin
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin_interface
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: root
+    ports:
+      - "8080:80"
+    depends_on:
+      - postgres
+    networks:
+      - etf_network
+
+  # Service 3 : Script ETL
+  etl:
+    build: ./etl_script
+    container_name: etl_worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_NAME: etf_data
+      DB_USER: user_etf
+      DB_PASS: password_etf
+    networks:
+      - etf_network
+
+  # Service 4 : Dashboard (NOUVEAU !)
+  dashboard:
+    build: ./dashboard
+    container_name: dashboard_ui
+    ports:
+      - "8501:8501"  # On ouvre le port pour accéder au site
+    depends_on:
+      postgres:
+        condition: service_healthy # Il a besoin de la DB pour afficher les données
+    environment:
+      DB_HOST: postgres
+      DB_NAME: etf_data
+      DB_USER: user_etf
+      DB_PASS: password_etf
+    networks:
+      - etf_network
+
+volumes:
+  postgres_data:
+
+networks:
+  etf_network:
+    driver: bridge

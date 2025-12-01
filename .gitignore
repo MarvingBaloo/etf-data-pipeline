@@ -1,0 +1,16 @@
+# Fichiers système Mac
+.DS_Store
+
+# Fichiers Python compilés
+__pycache__/
+*.py[cod]
+
+# Environnements virtuels (si tu en crées un jour)
+venv/
+.env
+
+# Données Docker (TRÈS IMPORTANT : on ne veut pas envoyer ta base de données)
+postgres_data/
+
+# Fichiers de logs éventuels
+*.log
