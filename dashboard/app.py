@@ -3,91 +3,71 @@ import pandas as pd
 from sqlalchemy import create_engine
 import os
 import plotly.express as px
+import plotly.graph_objects as go
 
-# 1. Configuration de la page
-st.set_page_config(page_title="Comparateur ETF", layout="wide")
+# Configuration de la page
+st.set_page_config(page_title="Super Dashboard ETF", layout="wide")
+st.title("🚀 Dashboard Financier Complet")
 
-st.title("📊 Comparateur de Performance ETF")
-st.markdown("Analysez et comparez la rentabilité du **SPY**, **QQQ** et **IWM** sur 30 ans.")
-
-# 2. Connexion Base de Données
+# Connexion BDD
 @st.cache_resource
-def get_database_connection():
+def get_connection():
     db_user = os.getenv('DB_USER')
     db_pass = os.getenv('DB_PASS')
     db_host = os.getenv('DB_HOST')
     db_name = os.getenv('DB_NAME')
-    connection_string = f"postgresql://{db_user}:{db_pass}@{db_host}:5432/{db_name}"
-    return create_engine(connection_string)
+    return create_engine(f"postgresql://{db_user}:{db_pass}@{db_host}:5432/{db_name}")
 
 try:
-    engine = get_database_connection()
+    engine = get_connection()
     
-    # 3. Récupération de TOUTES les données d'un coup
-    # C'est plus simple de tout charger et de filtrer avec Pandas ensuite
-    query = 'SELECT "Date", "Close", "Symbol" FROM etf_prices ORDER BY "Date" ASC'
+    # On récupère toutes les données d'un coup
+    query = 'SELECT * FROM etf_prices ORDER BY "Date" ASC'
     df_all = pd.read_sql(query, engine)
-    
-    # Liste des symboles disponibles
-    liste_etf_dispo = df_all['Symbol'].unique().tolist()
+    liste_etf = df_all['Symbol'].unique().tolist()
 
-    # --- BARRE LATÉRALE (Filtres) ---
-    st.sidebar.header("Configuration")
-    
-    # Multiselect : L'utilisateur peut en cocher plusieurs
-    # default=liste_etf_dispo : Par défaut, ils sont tous sélectionnés
-    choix_etfs = st.sidebar.multiselect(
-        "Sélectionnez les ETF à comparer :", 
-        options=liste_etf_dispo,
-        default=liste_etf_dispo
-    )
-    
-    # On filtre les données selon le choix de l'utilisateur
-    df_filtered = df_all[df_all['Symbol'].isin(choix_etfs)]
+    # --- CRÉATION DES ONGLETS ---
+    tab1, tab2 = st.tabs(["📊 Comparateur de Performance", "📈 Analyse Technique (Moyennes Mobiles)"])
 
-    if not df_filtered.empty:
-        # --- GRAPHIQUE COMPARATIF ---
-        st.subheader("Évolution comparée des prix ($)")
+    # === ONGLET 1 : LE COMPARATEUR (Ton ancienne version) ===
+    with tab1:
+        st.header("Qui est le plus rentable ?")
+        choix_etfs = st.multiselect("Sélectionnez les ETF :", liste_etf, default=liste_etf)
         
-        # L'argument magique ici est color='Symbol'
-        # Il crée automatiquement une courbe différente pour chaque ETF
-        fig = px.line(
-            df_filtered, 
-            x='Date', 
-            y='Close', 
-            color='Symbol', 
-            title="Historique des prix comparés",
-            template="plotly_dark" # Un look un peu plus moderne
-        )
-        st.plotly_chart(fig, use_container_width=True)
-
-        # --- TABLEAU DE PERFORMANCE (KPI) ---
-        st.subheader("Tableau de bord de rentabilité")
+        df_filtered = df_all[df_all['Symbol'].isin(choix_etfs)]
         
-        # On va créer un petit tableau récapitulatif
-        summary_data = []
-        
-        for ticker in choix_etfs:
-            # On prend les données juste pour ce ticker
-            df_ticker = df_filtered[df_filtered['Symbol'] == ticker]
+        if not df_filtered.empty:
+            # Graphique simple comparatif
+            fig1 = px.line(df_filtered, x='Date', y='Close', color='Symbol', title="Comparaison des prix")
+            st.plotly_chart(fig1, use_container_width=True)
             
-            if not df_ticker.empty:
-                start_price = df_ticker['Close'].iloc[0]
-                end_price = df_ticker['Close'].iloc[-1]
-                total_return = ((end_price - start_price) / start_price) * 100
-                
-                summary_data.append({
-                    "ETF": ticker,
-                    "Prix Départ ($)": round(start_price, 2),
-                    "Prix Fin ($)": round(end_price, 2),
-                    "Performance Totale (%)": f"+{total_return:.2f} %"
-                })
+            # Petit tableau de perf
+            st.write("Derniers prix enregistrés :")
+            st.dataframe(df_filtered.groupby('Symbol')['Close'].last(), use_container_width=True)
+
+    # === ONGLET 2 : L'ANALYSE TECHNIQUE (Ta nouvelle version Airflow) ===
+    with tab2:
+        st.header("Stratégie Golden Cross")
+        col1, col2 = st.columns([1, 3])
         
-        # Affichage du tableau propre
-        st.dataframe(pd.DataFrame(summary_data), use_container_width=True)
+        with col1:
+            etf_target = st.selectbox("Quel ETF analyser ?", liste_etf)
+            st.info("La courbe Jaune (50j) doit croiser la Rouge (200j) vers le haut pour un signal d'achat.")
         
-    else:
-        st.warning("Veuillez sélectionner au moins un ETF dans la barre latérale.")
+        with col2:
+            # On filtre pour un seul ETF
+            df_tech = df_all[df_all['Symbol'] == etf_target]
+            
+            fig2 = go.Figure()
+            # Prix
+            fig2.add_trace(go.Scatter(x=df_tech['Date'], y=df_tech['Close'], mode='lines', name='Prix', line=dict(color='white', width=1)))
+            # MA 50
+            fig2.add_trace(go.Scatter(x=df_tech['Date'], y=df_tech['MA_50'], mode='lines', name='Moyenne 50j', line=dict(color='yellow', width=1)))
+            # MA 200
+            fig2.add_trace(go.Scatter(x=df_tech['Date'], y=df_tech['MA_200'], mode='lines', name='Moyenne 200j', line=dict(color='red', width=2)))
+            
+            fig2.update_layout(template="plotly_dark", height=600)
+            st.plotly_chart(fig2, use_container_width=True)
 
 except Exception as e:
-    st.error(f"Erreur technique : {e}")
+    st.error(f"Erreur ou Base de données vide : {e}")

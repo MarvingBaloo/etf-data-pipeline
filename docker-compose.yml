@@ -1,7 +1,30 @@
 version: '3.8'
 
+# --- Configuration commune pour ne pas répéter le code ---
+x-airflow-common:
+  &airflow-common
+  # ON CHANGE ICI POUR AVOIR PYTHON 3.9
+  image: apache/airflow:2.7.1-python3.9
+  environment:
+    &airflow-common-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://user_etf:password_etf@postgres/etf_data
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    AIRFLOW_UID: 50000
+    # ON REMET L'INSTALLATION STANDARD
+    _PIP_ADDITIONAL_REQUIREMENTS: yfinance pandas sqlalchemy psycopg2-binary
+  volumes:
+    - ./dags:/opt/airflow/dags
+    - ./logs:/opt/airflow/logs
+    - ./plugins:/opt/airflow/plugins
+  depends_on:
+    &airflow-common-depends-on
+    postgres:
+      condition: service_healthy
+
 services:
-  # Service 1 : La Base de données
+  # 1. Base de données (Inchangée)
   postgres:
     image: postgres:15
     container_name: etf_db
@@ -18,10 +41,9 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U user_etf -d etf_data"]
       interval: 5s
-      timeout: 5s
       retries: 5
 
-  # Service 2 : Interface PgAdmin
+  # 2. PgAdmin (ATTENTION : Changement de port vers 5050)
   pgadmin:
     image: dpage/pgadmin4
     container_name: pgadmin_interface
@@ -29,36 +51,58 @@ services:
       PGADMIN_DEFAULT_EMAIL: admin@admin.com
       PGADMIN_DEFAULT_PASSWORD: root
     ports:
-      - "8080:80"
+      - "5050:80" # <--- NOUVEAU PORT ICI
     depends_on:
       - postgres
     networks:
       - etf_network
 
-  # Service 3 : Script ETL
-  etl:
-    build: ./etl_script
-    container_name: etl_worker
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment:
-      DB_HOST: postgres
-      DB_NAME: etf_data
-      DB_USER: user_etf
-      DB_PASS: password_etf
+  # 3. Airflow Webserver (L'interface graphique)
+  airflow-webserver:
+    <<: *airflow-common
+    container_name: airflow_webserver
+    command: webserver
+    ports:
+      - "8080:8080" # Airflow prend la place du roi sur le port 8080
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
     networks:
       - etf_network
 
-  # Service 4 : Dashboard (NOUVEAU !)
+  # 4. Airflow Scheduler (Le cerveau qui lance les tâches)
+  airflow-scheduler:
+    <<: *airflow-common
+    container_name: airflow_scheduler
+    command: scheduler
+    networks:
+      - etf_network
+
+  # 5. Airflow Init (Juste pour l'installation initiale)
+  airflow-init:
+    <<: *airflow-common
+    container_name: airflow_init
+    command: version
+    environment:
+      <<: *airflow-common-env
+      _AIRFLOW_DB_UPGRADE: 'true'
+      _AIRFLOW_WWW_USER_CREATE: 'true'
+      _AIRFLOW_WWW_USER_USERNAME: airflow
+      _AIRFLOW_WWW_USER_PASSWORD: airflow
+    networks:
+      - etf_network
+
+  # 6. Dashboard (Inchangé)
   dashboard:
     build: ./dashboard
     container_name: dashboard_ui
     ports:
-      - "8501:8501"  # On ouvre le port pour accéder au site
+      - "8501:8501"
     depends_on:
       postgres:
-        condition: service_healthy # Il a besoin de la DB pour afficher les données
+        condition: service_healthy
     environment:
       DB_HOST: postgres
       DB_NAME: etf_data
