@@ -113,7 +113,7 @@ try:
         choix = st.multiselect("Comparer :", liste_etf, default=liste_etf)
         
         # Filtre date spécifique au comparateur
-        d_start = st.date_input("Depuis le", datetime.date(2018, 1, 1), key="date_comp")
+        d_start = st.date_input("Depuis le", datetime.date(2005, 1, 1), key="date_comp")
         
         df_c = df_all[(df_all['Symbol'].isin(choix)) & (df_all['Date'].dt.date >= d_start)]
         if not df_c.empty:
