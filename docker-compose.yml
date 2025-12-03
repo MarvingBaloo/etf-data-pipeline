@@ -11,6 +11,11 @@ x-airflow-common:
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW_UID: 50000
     _PIP_ADDITIONAL_REQUIREMENTS: yfinance pandas sqlalchemy psycopg2-binary
+    
+    # --- NOUVEAU : AUTOMATISATION TOTALE DE LA CONNEXION ---
+    # Airflow va lire cette variable et créer la connexion "postgres_etf" tout seul !
+    AIRFLOW_CONN_POSTGRES_ETF: postgresql://user_etf:password_etf@postgres:5432/etf_data
+
   volumes:
     - ./dags:/opt/airflow/dags
     - ./logs:/opt/airflow/logs
@@ -32,7 +37,6 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # CORRECTION 1 : Init SQL automatique
       - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - etf_network
@@ -50,8 +54,8 @@ services:
     ports:
       - "5050:80"
     volumes:
-       # CORRECTION 2 : Persistance PgAdmin
       - pgadmin_data:/var/lib/pgadmin
+      - ./servers.json:/pgadmin4/servers.json
     depends_on:
       - postgres
     networks:
@@ -81,15 +85,13 @@ services:
   airflow-init:
     <<: *airflow-common
     container_name: airflow_init
-    # CORRECTION 3 : Automatisation de la connexion Airflow
-    command: >
-      bash -c "
-      /entrypoint.sh bash -c '
-      airflow db migrate &&
-      airflow users create -u airflow -p airflow -e admin@admin.com -f Marving -l Gustave -r Admin;
-      airflow connections add postgres_etf --conn-uri postgresql://user_etf:password_etf@postgres:5432/etf_data
-      '
-      "
+    command: version
+    environment:
+      <<: *airflow-common-env
+      _AIRFLOW_DB_UPGRADE: 'true'
+      _AIRFLOW_WWW_USER_CREATE: 'true'
+      _AIRFLOW_WWW_USER_USERNAME: airflow
+      _AIRFLOW_WWW_USER_PASSWORD: airflow
     networks:
       - etf_network
 
@@ -111,7 +113,7 @@ services:
 
 volumes:
   postgres_data:
-  pgadmin_data: # Volume pour PgAdmin
+  pgadmin_data:
 
 networks:
   etf_network:

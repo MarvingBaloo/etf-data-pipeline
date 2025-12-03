@@ -1,0 +1,14 @@
+{
+    "Servers": {
+        "1": {
+            "Name": "Ma Base ETF",
+            "Group": "Servers",
+            "Host": "postgres",
+            "Port": 5432,
+            "MaintenanceDB": "etf_data",
+            "Username": "user_etf",
+            "SSLMode": "prefer",
+            "Comment": "Connexion automatique via Docker"
+        }
+    }
+}
