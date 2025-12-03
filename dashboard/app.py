@@ -9,7 +9,7 @@ import datetime
 
 # --- CONFIGURATION PAGE ---
 st.set_page_config(page_title="Investisseur Pro", layout="wide", page_icon="🦁")
-st.title("🦁 Station de Trading & Simulation (V9.1 Correctif)")
+st.title("🦁 Station de Trading & Simulation (V9.1 - Depuis 2005)")
 
 # --- STYLE CSS ---
 st.markdown("""
@@ -48,26 +48,25 @@ try:
     liste_etf = df_all['Symbol'].unique().tolist()
     df_all['Date'] = pd.to_datetime(df_all['Date'])
 
-    # --- BARRE LATÉRALE (Uniquement pour les dates globales) ---
+    # --- BARRE LATÉRALE ---
     st.sidebar.header("📅 Dates de référence")
-    # Note : J'ai retiré le sélecteur d'ETF d'ici pour le remettre dans les onglets
     
     # --- ONGLETS ---
     tab1, tab2, tab3 = st.tabs(["🎓 L'Assistant", "📊 Comparateur", "🔮 Simulateur & Bilan"])
 
     # =========================================================
-    # ONGLET 1 : L'ASSISTANT (CORRIGÉ : SÉLECTEUR EST REVENU)
+    # ONGLET 1 : L'ASSISTANT
     # =========================================================
     with tab1:
         st.header("Analyse Technique & Verdict")
         
-        # --- LE SÉLECTEUR EST DE RETOUR ICI ---
         col_sel_ass, col_vide_ass = st.columns([1, 3])
         with col_sel_ass:
             etf_assistant = st.selectbox("Quel actif analyser ?", liste_etf, key="sel_assistant")
 
-        # Analyse sur 2 ans glissants pour la technique
-        date_debut_tech = datetime.date.today() - datetime.timedelta(days=365*2)
+        # --- MODIFICATION ICI : DÉBUT 2005 ---
+        date_debut_tech = datetime.date(2005, 1, 1)
+        
         df = df_all[(df_all['Symbol'] == etf_assistant) & (df_all['Date'].dt.date >= date_debut_tech)].copy()
 
         if not df.empty:
@@ -106,13 +105,13 @@ try:
             st.plotly_chart(fig, use_container_width=True)
 
     # =========================================================
-    # ONGLET 2 : COMPARATEUR (Inchangé)
+    # ONGLET 2 : COMPARATEUR
     # =========================================================
     with tab2:
         st.header("Comparaison Multi-Actifs")
         choix = st.multiselect("Comparer :", liste_etf, default=liste_etf)
         
-        # Filtre date spécifique au comparateur
+        # --- ICI C'ETAIT DÉJÀ BON DANS TON CODE (2005) ---
         d_start = st.date_input("Depuis le", datetime.date(2005, 1, 1), key="date_comp")
         
         df_c = df_all[(df_all['Symbol'].isin(choix)) & (df_all['Date'].dt.date >= d_start)]
@@ -121,14 +120,13 @@ try:
             st.plotly_chart(fig_c, use_container_width=True)
 
     # =========================================================
-    # ONGLET 3 : SIMULATEUR & BILAN (CORRIGÉ : SÉLECTEUR AJOUTÉ)
+    # ONGLET 3 : SIMULATEUR & BILAN
     # =========================================================
     with tab3:
         st.header("🔮 Bilan Historique & Simulation")
         
         col_sel_sim, col_vide_sim = st.columns([1, 3])
         with col_sel_sim:
-            # Sélecteur spécifique pour le simulateur
             etf_sim = st.selectbox("Actif à simuler", liste_etf, key="sel_sim")
         
         # --- PARTIE 1 : HISTOGRAMME ANNUEL ---
@@ -169,7 +167,9 @@ try:
         c_sim1, c_sim2, c_sim3 = st.columns(3)
         with c_sim1: montant = st.number_input("Montant (€)", min_value=10, value=200, step=10)
         with c_sim2: freq = st.selectbox("Fréquence", ["Mensuel", "Annuel"])
-        with c_sim3: date_start_sim = st.date_input("Début", datetime.date(2015, 1, 1))
+        
+        # --- ICI C'ETAIT DÉJÀ BON DANS TON CODE (2005) ---
+        with c_sim3: date_start_sim = st.date_input("Début", datetime.date(2005, 1, 1))
 
         if st.button("🚀 Simuler"):
             df_sim = df_target[df_target['Date'].dt.date >= date_start_sim].copy()
