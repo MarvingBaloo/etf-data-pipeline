@@ -1,9 +1,7 @@
 version: '3.8'
 
-# --- Configuration commune pour ne pas répéter le code ---
 x-airflow-common:
   &airflow-common
-  # ON CHANGE ICI POUR AVOIR PYTHON 3.9
   image: apache/airflow:2.7.1-python3.9
   environment:
     &airflow-common-env
@@ -12,7 +10,6 @@ x-airflow-common:
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW_UID: 50000
-    # ON REMET L'INSTALLATION STANDARD
     _PIP_ADDITIONAL_REQUIREMENTS: yfinance pandas sqlalchemy psycopg2-binary
   volumes:
     - ./dags:/opt/airflow/dags
@@ -24,7 +21,6 @@ x-airflow-common:
       condition: service_healthy
 
 services:
-  # 1. Base de données (Inchangée)
   postgres:
     image: postgres:15
     container_name: etf_db
@@ -36,6 +32,8 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      # CORRECTION 1 : Init SQL automatique
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - etf_network
     healthcheck:
@@ -43,7 +41,6 @@ services:
       interval: 5s
       retries: 5
 
-  # 2. PgAdmin (ATTENTION : Changement de port vers 5050)
   pgadmin:
     image: dpage/pgadmin4
     container_name: pgadmin_interface
@@ -51,19 +48,21 @@ services:
       PGADMIN_DEFAULT_EMAIL: admin@admin.com
       PGADMIN_DEFAULT_PASSWORD: root
     ports:
-      - "5050:80" # <--- NOUVEAU PORT ICI
+      - "5050:80"
+    volumes:
+       # CORRECTION 2 : Persistance PgAdmin
+      - pgadmin_data:/var/lib/pgadmin
     depends_on:
       - postgres
     networks:
       - etf_network
 
-  # 3. Airflow Webserver (L'interface graphique)
   airflow-webserver:
     <<: *airflow-common
     container_name: airflow_webserver
     command: webserver
     ports:
-      - "8080:8080" # Airflow prend la place du roi sur le port 8080
+      - "8080:8080"
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
       interval: 10s
@@ -72,7 +71,6 @@ services:
     networks:
       - etf_network
 
-  # 4. Airflow Scheduler (Le cerveau qui lance les tâches)
   airflow-scheduler:
     <<: *airflow-common
     container_name: airflow_scheduler
@@ -80,21 +78,21 @@ services:
     networks:
       - etf_network
 
-  # 5. Airflow Init (Juste pour l'installation initiale)
   airflow-init:
     <<: *airflow-common
     container_name: airflow_init
-    command: version
-    environment:
-      <<: *airflow-common-env
-      _AIRFLOW_DB_UPGRADE: 'true'
-      _AIRFLOW_WWW_USER_CREATE: 'true'
-      _AIRFLOW_WWW_USER_USERNAME: airflow
-      _AIRFLOW_WWW_USER_PASSWORD: airflow
+    # CORRECTION 3 : Automatisation de la connexion Airflow
+    command: >
+      bash -c "
+      /entrypoint.sh bash -c '
+      airflow db migrate &&
+      airflow users create -u airflow -p airflow -e admin@admin.com -f Marving -l Gustave -r Admin;
+      airflow connections add postgres_etf --conn-uri postgresql://user_etf:password_etf@postgres:5432/etf_data
+      '
+      "
     networks:
       - etf_network
 
-  # 6. Dashboard (Inchangé)
   dashboard:
     build: ./dashboard
     container_name: dashboard_ui
@@ -113,6 +111,7 @@ services:
 
 volumes:
   postgres_data:
+  pgadmin_data: # Volume pour PgAdmin
 
 networks:
   etf_network:
