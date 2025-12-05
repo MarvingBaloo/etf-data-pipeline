@@ -1,3 +1,39 @@
+# 🦁 Automated ETF Trading Station & Data Pipeline
+
+A professional End-to-End Data Engineering project.
+It orchestrates the **extraction**, **transformation**, and **visualization** of financial data using **Apache Airflow**, **Docker**, and **PostgreSQL**.
+
+![Dashboard Preview](dashboard_preview.png)
+
+---
+
+## 🎯 Project Objective
+
+To build a **"Zero-Touch" automated pipeline** that helps European investors make data-driven decisions.
+
+1.  **ETL Pipeline:** Extracts daily stock data for tax-efficient European ETFs (Accumulating).
+2.  **Warehousing:** Stores history in a PostgreSQL database (initialized automatically).
+3.  **Analytics:** Calculates Technical Indicators (RSI, MA50, MA200) and Annual Returns (CAGR).
+4.  **Frontend:** A Streamlit Dashboard to simulate investments (DCA) and detect market opportunities.
+
+---
+
+## 🚀 Quick Start (Zero-Touch Setup)
+
+### 1. Prerequisites
+
+* **Docker Desktop** installed and running.
+* **Git** installed.
+
+### 2. Installation
+
+Clone the repository and start the engine.
+
+```bash
+git clone https://github.com/MarvingBaloo/etf-data-pipeline.git
+cd etf-data-pipeline
+docker-compose up -d --build
+```
 > ⏳ **Wait ~60 seconds** for Airflow to initialize the database and create the admin user automatically.
 
 ### 3. Trigger the Data Ingestion
@@ -67,3 +103,4 @@ This project implements **DevOps & Data Engineering best practices**:
 **Stop the project:**
 ```bash
 docker-compose down
+```
