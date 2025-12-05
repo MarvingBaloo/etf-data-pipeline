@@ -1,50 +1,105 @@
-# 🚀 End-to-End Data Engineering Pipeline (V2)
+# 🦁 Automated ETF Trading Station & Data Pipeline
 
-An automated Data Engineering project that orchestrates the extraction, transformation, and visualization of financial data using **Apache Airflow**, **Docker**, and **PostgreSQL**.
+A professional End-to-End Data Engineering project.
+It orchestrates the **extraction**, **transformation**, and **visualization** of financial data using **Apache Airflow**, **Docker**, and **PostgreSQL**.
 
-## 🎯 Objective
-To build a robust pipeline that:
-1.  **Extracts** daily stock data for major ETFs (SPY, QQQ, IWM).
-2.  **Transforms** data by calculating Technical Indicators (Moving Averages MA50 & MA200).
-3.  **Loads** clean data into a PostgreSQL Data Warehouse.
-4.  **Visualizes** insights via an interactive Dashboard (Performance comparison & Golden Cross strategy).
+![Dashboard Preview](dashboard_preview.png)
 
-## 🛠 Tech Stack & Architecture
-* **Orchestration:** Apache Airflow (running on Python 3.9)
-* **Containerization:** Docker & Docker Compose
-* **Database:** PostgreSQL (v15)
-* **ETL:** Python (Pandas, SQLalchemy, Yfinance)
-* **Visualization:** Streamlit & Plotly
+---
 
-## 📊 Features
-* **Automated Pipeline:** Airflow DAG scheduled to run daily after market close.
-* **Technical Analysis:** Automatic calculation of 50-day and 200-day Moving Averages.
-* **Interactive Dashboard:**
-    * *Tab 1:* Multi-ETF Performance Comparator.
-    * *Tab 2:* Technical Analysis (Price vs Moving Averages).
+## 🎯 Project Objective
 
-## 🚀 How to Run
-1.  **Clone the repository:**
-    ```bash
-    git clone [https://github.com/MarvingBaloo/etf-data-pipeline.git](https://github.com/MarvingBaloo/etf-data-pipeline.git)
-    cd etf-data-pipeline
-    ```
+To build a **"Zero-Touch" automated pipeline** that helps European investors make data-driven decisions.
 
-2.  **Start the infrastructure:**
-    ```bash
-    docker-compose up -d --build
-    ```
-    *(First launch may take a few minutes to initialize Airflow).*
+1.  **ETL Pipeline:** Extracts daily stock data for tax-efficient European ETFs (Accumulating).
+2.  **Warehousing:** Stores history in a PostgreSQL database (initialized automatically).
+3.  **Analytics:** Calculates Technical Indicators (RSI, MA50, MA200) and Annual Returns (CAGR).
+4.  **Frontend:** A Streamlit Dashboard to simulate investments (DCA) and detect market opportunities.
 
-3.  **Access the services:**
+---
 
-| Service | URL | Credentials (User/Pass) |
-| :--- | :--- | :--- |
-| **Airflow UI** | http://localhost:8080 | `airflow` / `airflow` |
-| **Streamlit Dashboard** | http://localhost:8501 | *(No login required)* |
-| **PgAdmin (DB GUI)** | http://localhost:5050 | `admin@admin.com` / `root` |
+## 🚀 Quick Start (Zero-Touch Setup)
 
-4.  **Trigger the Pipeline:**
-    * Go to Airflow UI.
-    * Activate the DAG `etf_pipeline_v2_avec_indicateurs`.
-    * Click the "Play" button to trigger the first run.
+### 1. Prerequisites
+
+* **Docker Desktop** installed and running.
+* **Git** installed.
+
+### 2. Installation
+
+Clone the repository and start the engine.
+
+```bash
+git clone [https://github.com/MarvingBaloo/etf-data-pipeline.git](https://github.com/MarvingBaloo/etf-data-pipeline.git)
+cd etf-data-pipeline
+docker-compose up -d --build
+
+> ⏳ **Wait ~60 seconds** for Airflow to initialize the database and create the admin user automatically.
+
+### 3. Trigger the Data Ingestion
+1.  Go to Airflow: [http://localhost:8080](http://localhost:8080)
+2.  Login with the credentials below.
+3.  Toggle the DAG `etf_pipeline_v2_avec_indicateurs` to **ON** (Blue switch).
+4.  Click the **Play ▶️** button (Trigger DAG) to download the historical data (since 2005).
+
+### 4. Open the Trading Station
+Go to: [http://localhost:8501](http://localhost:8501)
+
+---
+
+## 🔑 Access & Credentials
+
+Everything is pre-configured. Use these logins:
+
+| Service | URL | Login | Password | Role |
+| :--- | :--- | :--- | :--- | :--- |
+| **Airflow UI** | [http://localhost:8080](http://localhost:8080) | `airflow` | `airflow` | Workflow Manager |
+| **PgAdmin** | [http://localhost:5050](http://localhost:5050) | `admin@admin.com` | `root` | Database Admin |
+| **Dashboard** | [http://localhost:8501](http://localhost:8501) | *(None)* | *(None)* | End-User App |
+| **Postgres** | `localhost:5432` | `user_etf` | `password_etf` | (Internal Use) |
+
+> **Note:** In PgAdmin, the server "Ma Base ETF" is already registered. You might need to re-enter the password (`password_etf`) upon first click for security reasons.
+
+---
+
+## ✨ Features Breakdown
+
+### 🎓 Tab 1: The Assistant (Smart Analysis)
+* **Verdict Engine:** Automatically analyzes **RSI** (Overbought/Oversold) and **Golden Crosses** (Trends) to give clear Buy/Sell signals (🟢/🔴).
+* **Educational Mode:** Tooltips and Glossaries explain complex terms to beginners.
+* **Annual Performance:** Bar chart showing yearly returns to visualize volatility.
+
+### 📊 Tab 2: The Comparator
+* Compare multiple assets (Stocks vs Bonds) on a normalized graph.
+* Analyze **CAGR** (Compound Annual Growth Rate) over specific periods.
+
+### 🔮 Tab 3: DCA Simulator (Backtesting)
+* **Simulation:** "What if I invested 200€/month since 2015?"
+* **Visual Proof:** Compares "Cash kept under mattress" vs "Invested Portfolio".
+* **Reality Check:** Highlights the power of compound interest.
+
+### 🇪🇺 Assets Tracked (European Optimized)
+To avoid US Withholding Tax and simplify management, the pipeline tracks **Accumulating ETFs** (Dividends are reinvested automatically):
+* **CSPX.AS:** iShares Core S&P 500 (Acc)
+* **CNDX.AS:** iShares Nasdaq 100 (Acc)
+* **ZPRR.DE:** SPDR Russell 2000 US Small Cap (Acc)
+* **AGGH.AS:** iShares Global Aggregate Bond (Hedged)
+
+---
+
+## 🛡 Engineering Highlights (Automation)
+
+This project implements **DevOps & Data Engineering best practices**:
+
+1.  **DDL Management:** The table `etf_prices` is created automatically by Postgres (`init.sql`) on startup. The Dashboard never crashes due to missing tables.
+2.  **Infrastructure as Code:** Airflow Connections are injected via Environment Variables (`AIRFLOW_CONN_...`). No manual setup required in the UI.
+3.  **Persistence:** Docker Volumes (`postgres_data`, `pgadmin_data`) ensure data survives container restarts.
+4.  **Robustness:** The ETL script uses `to_sql(if_exists='replace')` to be idempotent (can be re-run safely).
+
+---
+
+## 🧹 Maintenance Commands
+
+**Stop the project:**
+```bash
+docker-compose down
